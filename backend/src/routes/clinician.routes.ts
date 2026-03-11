@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createClinician, getClinician } from "../controllers/clinicianController";
+import { createClinician, getClinician } from "../controllers/clinician.controller";
 
 const router = Router();
 
