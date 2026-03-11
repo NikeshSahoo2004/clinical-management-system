@@ -20,3 +20,16 @@ export const createClinician = async (data: any) => {
 
   return result.rows[0];
 };
+
+export const updateAvailability = async (id: string, availability: any) => {
+
+  const result = await pool.query(
+    `UPDATE clinicians
+     SET availability=$1
+     WHERE id=$2
+     RETURNING *`,
+    [JSON.stringify(availability), id]
+  );
+
+  return result.rows[0];
+};

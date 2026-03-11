@@ -1,21 +1,56 @@
 import { Request, Response } from "express";
 import * as treatmentService from "../services/treatment.service";
 
+
 export const createTreatmentPlan = async (req: Request, res: Response) => {
   try {
+
     const plan = await treatmentService.createTreatmentPlan(req.body);
+
     res.status(201).json(plan);
+
   } catch (error) {
-    res.status(500).json({ message: "Error creating treatment plan" });
+
+    console.error(error);
+
+    res.status(500).json({
+      message: "Error creating treatment plan"
+    });
   }
 };
 
+
 export const getTreatmentPlansByPatient = async (req: Request, res: Response) => {
   try {
+
     const patientId = String(req.params.id);
+
     const plans = await treatmentService.getTreatmentPlansByPatient(patientId);
+
     res.json(plans);
+
   } catch (error) {
-    res.status(500).json({ message: "Error fetching treatment plans" });
+
+    res.status(500).json({
+      message: "Error fetching treatment plans"
+    });
+  }
+};
+
+
+export const updateTreatmentPlan = async (req: Request, res: Response) => {
+  try {
+
+    const id = String(req.params.id);
+
+    const updatedPlan = await treatmentService.updateTreatmentPlan(id, req.body);
+
+    res.json(updatedPlan);
+
+  } catch (error) {
+
+    res.status(500).json({
+      message: "Error updating treatment plan"
+    });
   }
 };

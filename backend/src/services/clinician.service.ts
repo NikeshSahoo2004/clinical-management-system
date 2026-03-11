@@ -1,25 +1,9 @@
-import { pool } from "../db/db";
+import * as clinicianModel from "../models/clinician.model";
 import { ClinicianInput } from "../types/clinician.types";
+import { pool } from "../db/db";
 
 export const createClinician = async (data: ClinicianInput) => {
-
-  const result = await pool.query(
-    `INSERT INTO clinicians
-    (first_name, last_name, title, license_number, specialty, email, phone)
-    VALUES ($1,$2,$3,$4,$5,$6,$7)
-    RETURNING *`,
-    [
-      data.firstName,
-      data.lastName,
-      data.title,
-      data.licenseNumber,
-      data.specialty,
-      data.email,
-      data.phone
-    ]
-  );
-
-  return result.rows[0];
+  return clinicianModel.createClinician(data);
 };
 
 export const getClinicianById = async (id: string) => {
@@ -30,4 +14,11 @@ export const getClinicianById = async (id: string) => {
   );
 
   return result.rows[0];
+};
+
+export const updateAvailability = async (id: string, availability: any) => {
+
+  const updated = await clinicianModel.updateAvailability(id, availability);
+
+  return updated;
 };

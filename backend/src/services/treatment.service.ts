@@ -31,3 +31,10 @@ export const getTreatmentPlansByPatient = async (patientId: string) => {
     frequency: p.frequency
   }));
 };
+
+export const updateTreatmentPlan = async (id: string, data: any) => {
+
+  const updated = await treatmentModel.updateTreatmentPlan(id, data);
+
+  return updated;
+};
