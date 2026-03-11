@@ -24,7 +24,7 @@ export async function getAllAppointments(
   return buildPaginatedResponse(rows, total, page, limit);
 }
 
-export async function getAppointmentById(id: number): Promise<Appointment | null> {
+export async function getAppointmentById(id: string): Promise<Appointment | null> {
   return AppointmentModel.findById(id);
 }
 
@@ -33,7 +33,7 @@ export async function createAppointment(data: CreateAppointmentDTO): Promise<App
 }
 
 export async function updateAppointment(
-  id: number,
+  id: string,
   data: UpdateAppointmentDTO
 ): Promise<Appointment | null> {
   const existing = await AppointmentModel.findById(id);
@@ -42,6 +42,6 @@ export async function updateAppointment(
   return AppointmentModel.update(id, data);
 }
 
-export async function deleteAppointment(id: number): Promise<boolean> {
+export async function deleteAppointment(id: string): Promise<boolean> {
   return AppointmentModel.remove(id);
 }

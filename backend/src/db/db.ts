@@ -1,12 +1,34 @@
-import { Pool } from "pg";
-import dotenv from "dotenv";
+import mongoose from "mongoose";
 
-dotenv.config();
+const MONGODB_URI = process.env.MONGODB_URI || "mongodb://localhost:27017/clinical_database";
 
-export const pool = new Pool({
-  user: process.env.DB_USER,
-  host: process.env.DB_HOST,
-  database: process.env.DB_NAME,
-  password: process.env.DB_PASSWORD,
-  port: Number(process.env.DB_PORT),
+export async function connectDatabase(): Promise<void> {
+  try {
+    await mongoose.connect(MONGODB_URI);
+    console.log("Connected to MongoDB successfully");
+  } catch (error) {
+    console.error("MongoDB connection error:", error);
+    throw error;
+  }
+}
+
+export async function disconnectDatabase(): Promise<void> {
+  try {
+    await mongoose.disconnect();
+    console.log("Disconnected from MongoDB");
+  } catch (error) {
+    console.error("MongoDB disconnection error:", error);
+    throw error;
+  }
+}
+
+mongoose.connection.on("error", (err) => {
+  console.error("MongoDB connection error:", err);
 });
+
+process.on("SIGINT", async () => {
+  await disconnectDatabase();
+  process.exit(0);
+});
+
+export default mongoose;

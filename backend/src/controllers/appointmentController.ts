@@ -23,7 +23,7 @@ export async function getAll(req: Request, res: Response): Promise<void> {
 
 export async function getById(req: Request, res: Response): Promise<void> {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const id = req.params.id as string;
     const appointment = await appointmentService.getAppointmentById(id);
 
     if (!appointment) {
@@ -50,7 +50,7 @@ export async function create(req: Request, res: Response): Promise<void> {
 
 export async function update(req: Request, res: Response): Promise<void> {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const id = req.params.id as string;
     const appointment = await appointmentService.updateAppointment(id, req.body);
 
     if (!appointment) {
@@ -67,7 +67,7 @@ export async function update(req: Request, res: Response): Promise<void> {
 
 export async function remove(req: Request, res: Response): Promise<void> {
   try {
-    const id = parseInt(req.params.id as string, 10);
+    const id = req.params.id as string;
     const deleted = await appointmentService.deleteAppointment(id);
 
     if (!deleted) {

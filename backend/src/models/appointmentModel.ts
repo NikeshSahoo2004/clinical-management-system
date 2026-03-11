@@ -1,25 +1,95 @@
-import { pool } from "../db/db";
+import mongoose, { Schema, Document } from "mongoose";
 import {
   Appointment,
   CreateAppointmentDTO,
   UpdateAppointmentDTO,
+  AppointmentStatus,
 } from "../types/appointmentTypes";
 
+export interface AppointmentDocument extends Omit<Appointment, "id">, Document {
+  _id: mongoose.Types.ObjectId;
+}
+
+const appointmentSchema = new Schema<AppointmentDocument>(
+  {
+    patient_name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    doctor_name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    appointment_date: {
+      type: String,
+      required: true,
+    },
+    appointment_time: {
+      type: String,
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["scheduled", "completed", "cancelled", "no-show"],
+      default: "scheduled",
+    },
+    reason: {
+      type: String,
+      required: true,
+    },
+  },
+  {
+    timestamps: {
+      createdAt: "created_at",
+      updatedAt: "updated_at",
+    },
+    toJSON: {
+      virtuals: true,
+      transform: (_doc, ret: Record<string, any>) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
+    toObject: {
+      virtuals: true,
+      transform: (_doc, ret: Record<string, any>) => {
+        ret.id = ret._id.toString();
+        delete ret._id;
+        delete ret.__v;
+        return ret;
+      },
+    },
+  }
+);
+
+appointmentSchema.index({ appointment_date: 1, appointment_time: 1 });
+appointmentSchema.index({ status: 1 });
+appointmentSchema.index({ doctor_name: 1 });
+appointmentSchema.index({ patient_name: 1 });
+
+const AppointmentModel = mongoose.model<AppointmentDocument>("Appointment", appointmentSchema);
+
+function toAppointment(doc: AppointmentDocument): Appointment {
+  const obj = doc.toJSON();
+  return {
+    id: obj.id,
+    patient_name: obj.patient_name,
+    doctor_name: obj.doctor_name,
+    appointment_date: obj.appointment_date,
+    appointment_time: obj.appointment_time,
+    status: obj.status as AppointmentStatus,
+    reason: obj.reason,
+    created_at: obj.created_at,
+    updated_at: obj.updated_at,
+  };
+}
+
 export async function initializeTable(): Promise<void> {
-  const query = `
-    CREATE TABLE IF NOT EXISTS appointments (
-      id SERIAL PRIMARY KEY,
-      patient_name VARCHAR(255) NOT NULL,
-      doctor_name VARCHAR(255) NOT NULL,
-      appointment_date DATE NOT NULL,
-      appointment_time TIME NOT NULL,
-      status VARCHAR(20) NOT NULL DEFAULT 'scheduled',
-      reason TEXT NOT NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-  `;
-  await pool.query(query);
+  await AppointmentModel.ensureIndexes();
 }
 
 export async function findAll(
@@ -27,110 +97,112 @@ export async function findAll(
   offset: number,
   filters: { status?: string; doctor_name?: string; patient_name?: string; date?: string }
 ): Promise<{ rows: Appointment[]; total: number }> {
-  const conditions: string[] = [];
-  const values: any[] = [];
-  let paramIndex = 1;
+  const query: Record<string, any> = {};
 
   if (filters.status) {
-    conditions.push(`status = $${paramIndex++}`);
-    values.push(filters.status);
+    query.status = filters.status;
   }
   if (filters.doctor_name) {
-    conditions.push(`doctor_name ILIKE $${paramIndex++}`);
-    values.push(`%${filters.doctor_name}%`);
+    query.doctor_name = { $regex: filters.doctor_name, $options: "i" };
   }
   if (filters.patient_name) {
-    conditions.push(`patient_name ILIKE $${paramIndex++}`);
-    values.push(`%${filters.patient_name}%`);
+    query.patient_name = { $regex: filters.patient_name, $options: "i" };
   }
   if (filters.date) {
-    conditions.push(`appointment_date = $${paramIndex++}`);
-    values.push(filters.date);
+    query.appointment_date = filters.date;
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  const total = await AppointmentModel.countDocuments(query);
 
-  const countQuery = `SELECT COUNT(*) FROM appointments ${whereClause}`;
-  const countResult = await pool.query(countQuery, values);
-  const total = parseInt(countResult.rows[0].count, 10);
+  const docs = await AppointmentModel.find(query)
+    .sort({ appointment_date: 1, appointment_time: 1 })
+    .skip(offset)
+    .limit(limit)
+    .exec();
 
-  const dataQuery = `
-    SELECT * FROM appointments ${whereClause}
-    ORDER BY appointment_date ASC, appointment_time ASC
-    LIMIT $${paramIndex++} OFFSET $${paramIndex++}
-  `;
-  const dataResult = await pool.query(dataQuery, [...values, limit, offset]);
+  const rows = docs.map(toAppointment);
 
-  return { rows: dataResult.rows, total };
+  return { rows, total };
 }
 
-export async function findById(id: number): Promise<Appointment | null> {
-  const result = await pool.query("SELECT * FROM appointments WHERE id = $1", [id]);
-  return result.rows[0] || null;
+export async function findById(id: string): Promise<Appointment | null> {
+  try {
+    const doc = await AppointmentModel.findById(id).exec();
+    return doc ? toAppointment(doc) : null;
+  } catch (error) {
+    if ((error as any).name === "CastError") {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function create(data: CreateAppointmentDTO): Promise<Appointment> {
-  const result = await pool.query(
-    `INSERT INTO appointments (patient_name, doctor_name, appointment_date, appointment_time, status, reason)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
-    [
-      data.patient_name,
-      data.doctor_name,
-      data.appointment_date,
-      data.appointment_time,
-      data.status || "scheduled",
-      data.reason,
-    ]
-  );
-  return result.rows[0];
+  const doc = await AppointmentModel.create({
+    patient_name: data.patient_name,
+    doctor_name: data.doctor_name,
+    appointment_date: data.appointment_date,
+    appointment_time: data.appointment_time,
+    status: data.status || "scheduled",
+    reason: data.reason,
+  });
+
+  return toAppointment(doc);
 }
 
-export async function update(id: number, data: UpdateAppointmentDTO): Promise<Appointment | null> {
-  const fields: string[] = [];
-  const values: any[] = [];
-  let paramIndex = 1;
+export async function update(id: string, data: UpdateAppointmentDTO): Promise<Appointment | null> {
+  try {
+    const updateData: Record<string, any> = {};
 
-  if (data.patient_name !== undefined) {
-    fields.push(`patient_name = $${paramIndex++}`);
-    values.push(data.patient_name);
-  }
-  if (data.doctor_name !== undefined) {
-    fields.push(`doctor_name = $${paramIndex++}`);
-    values.push(data.doctor_name);
-  }
-  if (data.appointment_date !== undefined) {
-    fields.push(`appointment_date = $${paramIndex++}`);
-    values.push(data.appointment_date);
-  }
-  if (data.appointment_time !== undefined) {
-    fields.push(`appointment_time = $${paramIndex++}`);
-    values.push(data.appointment_time);
-  }
-  if (data.status !== undefined) {
-    fields.push(`status = $${paramIndex++}`);
-    values.push(data.status);
-  }
-  if (data.reason !== undefined) {
-    fields.push(`reason = $${paramIndex++}`);
-    values.push(data.reason);
-  }
+    if (data.patient_name !== undefined) {
+      updateData.patient_name = data.patient_name;
+    }
+    if (data.doctor_name !== undefined) {
+      updateData.doctor_name = data.doctor_name;
+    }
+    if (data.appointment_date !== undefined) {
+      updateData.appointment_date = data.appointment_date;
+    }
+    if (data.appointment_time !== undefined) {
+      updateData.appointment_time = data.appointment_time;
+    }
+    if (data.status !== undefined) {
+      updateData.status = data.status;
+    }
+    if (data.reason !== undefined) {
+      updateData.reason = data.reason;
+    }
 
-  if (fields.length === 0) return findById(id);
+    if (Object.keys(updateData).length === 0) {
+      return findById(id);
+    }
 
-  fields.push(`updated_at = CURRENT_TIMESTAMP`);
-  values.push(id);
+    const doc = await AppointmentModel.findByIdAndUpdate(
+      id,
+      { $set: updateData },
+      { new: true, runValidators: true }
+    ).exec();
 
-  const query = `
-    UPDATE appointments SET ${fields.join(", ")}
-    WHERE id = $${paramIndex}
-    RETURNING *
-  `;
-  const result = await pool.query(query, values);
-  return result.rows[0] || null;
+    return doc ? toAppointment(doc) : null;
+  } catch (error) {
+    if ((error as any).name === "CastError") {
+      return null;
+    }
+    throw error;
+  }
 }
 
-export async function remove(id: number): Promise<boolean> {
-  const result = await pool.query("DELETE FROM appointments WHERE id = $1", [id]);
-  return (result.rowCount ?? 0) > 0;
+export async function remove(id: string): Promise<boolean> {
+  try {
+    const result = await AppointmentModel.findByIdAndDelete(id).exec();
+    return result !== null;
+  } catch (error) {
+    if ((error as any).name === "CastError") {
+      return false;
+    }
+    throw error;
+  }
 }
+
+export default AppointmentModel;
+

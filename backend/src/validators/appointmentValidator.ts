@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { isValidDate, isValidTime, isFutureDate } from "../utils/dateUtils";
 import { AppointmentStatus } from "../types/appointmentTypes";
+import mongoose from "mongoose";
 
 const VALID_STATUSES: AppointmentStatus[] = ["scheduled", "completed", "cancelled", "no-show"];
 
@@ -77,9 +78,9 @@ export function validateUpdateAppointment(req: Request, res: Response, next: Nex
 }
 
 export function validateIdParam(req: Request, res: Response, next: NextFunction): void {
-  const id = parseInt(req.params.id as string, 10);
-  if (isNaN(id) || id <= 0) {
-    res.status(400).json({ error: "Invalid appointment ID. Must be a positive integer." });
+  const id = req.params.id as string;
+  if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    res.status(400).json({ error: "Invalid appointment ID. Must be a valid MongoDB ObjectId." });
     return;
   }
   next();
