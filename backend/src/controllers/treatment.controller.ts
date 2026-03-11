@@ -41,16 +41,31 @@ export const getTreatmentPlansByPatient = async (req: Request, res: Response) =>
 export const updateTreatmentPlan = async (req: Request, res: Response) => {
   try {
 
-    const id = String(req.params.id);
+    const treatmentId = String(req.params.id);
 
-    const updatedPlan = await treatmentService.updateTreatmentPlan(id, req.body);
+    const updatedPlan = await treatmentService.updateTreatmentPlan(
+      treatmentId,
+      req.body
+    );
 
-    res.json(updatedPlan);
+    if (!updatedPlan) {
+      return res.status(404).json({
+        message: "No such treatment plan exists"
+      });
+    }
+
+    res.status(200).json({
+      message: "Treatment plan updated successfully",
+      data: updatedPlan
+    });
 
   } catch (error) {
+
+    console.error(error);
 
     res.status(500).json({
       message: "Error updating treatment plan"
     });
+
   }
 };
