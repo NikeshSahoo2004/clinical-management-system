@@ -1,72 +1,150 @@
 import { Request, Response, NextFunction } from "express";
-import { isValidDate, isValidTime, isFutureDate } from "../utils/dateUtils";
-import { AppointmentStatus } from "../types/appointmentTypes";
 import mongoose from "mongoose";
+import {
+  APPOINTMENT_TYPES,
+  APPOINTMENT_STATUSES,
+  BILLING_STATUSES,
+  LOCATION_OPTIONS,
+  MAX_DURATION,
+  AppointmentType,
+  AppointmentStatus,
+  BillingStatus,
+  LocationOption,
+} from "../types/appointmentTypes";
 
-const VALID_STATUSES: AppointmentStatus[] = ["scheduled", "completed", "cancelled", "no-show"];
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-export function validateCreateAppointment(req: Request, res: Response, next: NextFunction): void {
-  const { patient_name, doctor_name, appointment_date, appointment_time, status, reason } =
-    req.body;
-
-  const errors: string[] = [];
-
-  if (!patient_name || typeof patient_name !== "string" || patient_name.trim().length === 0) {
-    errors.push("patient_name is required and must be a non-empty string");
-  }
-  if (!doctor_name || typeof doctor_name !== "string" || doctor_name.trim().length === 0) {
-    errors.push("doctor_name is required and must be a non-empty string");
-  }
-  if (!appointment_date || !isValidDate(appointment_date)) {
-    errors.push("appointment_date is required and must be in YYYY-MM-DD format");
-  } else if (!isFutureDate(appointment_date)) {
-    errors.push("appointment_date must be today or a future date");
-  }
-  if (!appointment_time || !isValidTime(appointment_time)) {
-    errors.push("appointment_time is required and must be in HH:MM (24-hour) format");
-  }
-  if (status && !VALID_STATUSES.includes(status)) {
-    errors.push(`status must be one of: ${VALID_STATUSES.join(", ")}`);
-  }
-  if (!reason || typeof reason !== "string" || reason.trim().length === 0) {
-    errors.push("reason is required and must be a non-empty string");
-  }
-
-  if (errors.length > 0) {
-    res.status(400).json({ errors });
-    return;
-  }
-
-  next();
+function isObjectId(val: unknown): boolean {
+  return typeof val === "string" && mongoose.Types.ObjectId.isValid(val);
 }
 
-export function validateUpdateAppointment(req: Request, res: Response, next: NextFunction): void {
-  const { patient_name, doctor_name, appointment_date, appointment_time, status, reason } =
-    req.body;
+function isISODate(val: unknown): boolean {
+  if (typeof val !== "string") return false;
+  const d = new Date(val);
+  return !isNaN(d.getTime());
+}
 
-  const errors: string[] = [];
+function isFutureDate(val: string): boolean {
+  return new Date(val) >= new Date();
+}
 
-  if (patient_name !== undefined && (typeof patient_name !== "string" || patient_name.trim().length === 0)) {
-    errors.push("patient_name must be a non-empty string");
+function validateBillingFields(
+  billing: Record<string, any>,
+  errors: string[],
+  requireAmount = false
+): void {
+  if (requireAmount && billing.amount === undefined) {
+    // amount is optional on create – Mongoose defaults to 0
   }
-  if (doctor_name !== undefined && (typeof doctor_name !== "string" || doctor_name.trim().length === 0)) {
-    errors.push("doctor_name must be a non-empty string");
-  }
-  if (appointment_date !== undefined) {
-    if (!isValidDate(appointment_date)) {
-      errors.push("appointment_date must be in YYYY-MM-DD format");
-    } else if (!isFutureDate(appointment_date)) {
-      errors.push("appointment_date must be today or a future date");
+  if (billing.amount !== undefined) {
+    if (typeof billing.amount !== "number" || billing.amount < 0) {
+      errors.push("billing.amount must be a non-negative number");
     }
   }
-  if (appointment_time !== undefined && !isValidTime(appointment_time)) {
-    errors.push("appointment_time must be in HH:MM (24-hour) format");
+  if (billing.status !== undefined) {
+    if (!(BILLING_STATUSES as readonly string[]).includes(billing.status)) {
+      errors.push(`billing.status must be one of: ${BILLING_STATUSES.join(", ")}`);
+    }
   }
-  if (status !== undefined && !VALID_STATUSES.includes(status)) {
-    errors.push(`status must be one of: ${VALID_STATUSES.join(", ")}`);
+  if (billing.insuranceDetails !== undefined) {
+    if (typeof billing.insuranceDetails !== "object" || billing.insuranceDetails === null) {
+      errors.push("billing.insuranceDetails must be an object");
+    } else {
+      const ins = billing.insuranceDetails;
+      if (
+        ins.provider !== undefined &&
+        ins.provider !== null &&
+        typeof ins.provider !== "string"
+      ) {
+        errors.push("billing.insuranceDetails.provider must be a string or null");
+      }
+      if (
+        ins.policyNumber !== undefined &&
+        ins.policyNumber !== null &&
+        typeof ins.policyNumber !== "string"
+      ) {
+        errors.push("billing.insuranceDetails.policyNumber must be a string or null");
+      }
+    }
   }
-  if (reason !== undefined && (typeof reason !== "string" || reason.trim().length === 0)) {
-    errors.push("reason must be a non-empty string");
+}
+
+// ── Create ───────────────────────────────────────────────────────────────────
+
+export function validateCreateAppointment(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const {
+    patientId,
+    clinicianId,
+    appointmentType,
+    status,
+    scheduledAt,
+    duration,
+    location,
+    notes,
+    billing,
+  } = req.body;
+
+  const errors: string[] = [];
+
+  // Required ObjectId refs
+  if (!patientId || !isObjectId(patientId)) {
+    errors.push("patientId is required and must be a valid ObjectId");
+  }
+  if (!clinicianId || !isObjectId(clinicianId)) {
+    errors.push("clinicianId is required and must be a valid ObjectId");
+  }
+
+  // appointmentType
+  if (
+    !appointmentType ||
+    !(APPOINTMENT_TYPES as readonly string[]).includes(appointmentType)
+  ) {
+    errors.push(`appointmentType is required and must be one of: ${APPOINTMENT_TYPES.join(", ")}`);
+  }
+
+  // status (optional on create)
+  if (
+    status !== undefined &&
+    !(APPOINTMENT_STATUSES as readonly string[]).includes(status)
+  ) {
+    errors.push(`status must be one of: ${APPOINTMENT_STATUSES.join(", ")}`);
+  }
+
+  // scheduledAt
+  if (!scheduledAt || !isISODate(scheduledAt)) {
+    errors.push("scheduledAt is required and must be a valid ISO-8601 date string");
+  } else if (!isFutureDate(scheduledAt)) {
+    errors.push("scheduledAt must be a current or future date/time");
+  }
+
+  // duration
+  if (duration === undefined || typeof duration !== "number" || duration < 5) {
+    errors.push("duration is required and must be at least 5 minutes");
+  } else if (duration > MAX_DURATION) {
+    errors.push(`duration must not exceed ${MAX_DURATION} minutes`);
+  }
+
+  // location
+  if (!location || !(LOCATION_OPTIONS as readonly string[]).includes(location)) {
+    errors.push(`location is required and must be one of: ${LOCATION_OPTIONS.join(", ")}`);
+  }
+
+  // notes (optional)
+  if (notes !== undefined && typeof notes !== "string") {
+    errors.push("notes must be a string");
+  }
+
+  // billing (optional nested)
+  if (billing !== undefined) {
+    if (typeof billing !== "object" || billing === null) {
+      errors.push("billing must be an object");
+    } else {
+      validateBillingFields(billing, errors);
+    }
   }
 
   if (errors.length > 0) {
@@ -77,10 +155,118 @@ export function validateUpdateAppointment(req: Request, res: Response, next: Nex
   next();
 }
 
-export function validateIdParam(req: Request, res: Response, next: NextFunction): void {
+// ── Update (PUT) ─────────────────────────────────────────────────────────────
+
+export function validateUpdateAppointment(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const {
+    patientId,
+    clinicianId,
+    appointmentType,
+    status,
+    scheduledAt,
+    duration,
+    location,
+    notes,
+    billing,
+  } = req.body;
+
+  const errors: string[] = [];
+
+  if (patientId !== undefined && !isObjectId(patientId)) {
+    errors.push("patientId must be a valid ObjectId");
+  }
+  if (clinicianId !== undefined && !isObjectId(clinicianId)) {
+    errors.push("clinicianId must be a valid ObjectId");
+  }
+  if (
+    appointmentType !== undefined &&
+    !(APPOINTMENT_TYPES as readonly string[]).includes(appointmentType)
+  ) {
+    errors.push(`appointmentType must be one of: ${APPOINTMENT_TYPES.join(", ")}`);
+  }
+  if (
+    status !== undefined &&
+    !(APPOINTMENT_STATUSES as readonly string[]).includes(status)
+  ) {
+    errors.push(`status must be one of: ${APPOINTMENT_STATUSES.join(", ")}`);
+  }
+  if (scheduledAt !== undefined) {
+    if (!isISODate(scheduledAt)) {
+      errors.push("scheduledAt must be a valid ISO-8601 date string");
+    } else if (!isFutureDate(scheduledAt)) {
+      errors.push("scheduledAt must be a current or future date/time");
+    }
+  }
+  if (duration !== undefined) {
+    if (typeof duration !== "number" || duration < 5) {
+      errors.push("duration must be at least 5 minutes");
+    } else if (duration > MAX_DURATION) {
+      errors.push(`duration must not exceed ${MAX_DURATION} minutes`);
+    }
+  }
+  if (
+    location !== undefined &&
+    !(LOCATION_OPTIONS as readonly string[]).includes(location)
+  ) {
+    errors.push(`location must be one of: ${LOCATION_OPTIONS.join(", ")}`);
+  }
+  if (notes !== undefined && typeof notes !== "string") {
+    errors.push("notes must be a string");
+  }
+  if (billing !== undefined) {
+    if (typeof billing !== "object" || billing === null) {
+      errors.push("billing must be an object");
+    } else {
+      validateBillingFields(billing, errors);
+    }
+  }
+
+  if (errors.length > 0) {
+    res.status(400).json({ errors });
+    return;
+  }
+
+  next();
+}
+
+// ── PATCH status ─────────────────────────────────────────────────────────────
+
+export function validateStatusUpdate(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const { status } = req.body;
+  const errors: string[] = [];
+
+  if (!status || !(APPOINTMENT_STATUSES as readonly string[]).includes(status)) {
+    errors.push(`status is required and must be one of: ${APPOINTMENT_STATUSES.join(", ")}`);
+  }
+
+  if (errors.length > 0) {
+    res.status(400).json({ errors });
+    return;
+  }
+
+  next();
+}
+
+// ── ID param ─────────────────────────────────────────────────────────────────
+
+export function validateIdParam(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
   const id = req.params.id as string;
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-    res.status(400).json({ error: "Invalid appointment ID. Must be a valid MongoDB ObjectId." });
+    res
+      .status(400)
+      .json({ error: "Invalid appointment ID. Must be a valid MongoDB ObjectId." });
     return;
   }
   next();

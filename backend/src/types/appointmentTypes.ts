@@ -1,42 +1,124 @@
-export interface Appointment {
-  id: string;
-  patient_name: string;
-  doctor_name: string;
-  appointment_date: string;
-  appointment_time: string;
-  status: AppointmentStatus;
-  reason: string;
-  created_at: Date;
-  updated_at: Date;
+// ── Enums ────────────────────────────────────────────────────────────────────
+
+export const APPOINTMENT_TYPES = ["Consultation", "Follow-up", "Procedure"] as const;
+export type AppointmentType = (typeof APPOINTMENT_TYPES)[number];
+
+export const APPOINTMENT_STATUSES = ["Scheduled", "Completed", "Cancelled"] as const;
+export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
+
+export const BILLING_STATUSES = ["Pending", "Paid", "Insured"] as const;
+export type BillingStatus = (typeof BILLING_STATUSES)[number];
+
+export const LOCATION_OPTIONS = ["Main Clinic", "Telehealth", "Branch Clinic"] as const;
+export type LocationOption = (typeof LOCATION_OPTIONS)[number];
+
+export const MAX_DURATION = 480; // 8 hours in minutes
+
+export const VALID_STATUS_TRANSITIONS: Record<AppointmentStatus, readonly AppointmentStatus[]> = {
+  Scheduled: ["Completed", "Cancelled"],
+  Completed: [],           // terminal state
+  Cancelled: ["Scheduled"], // allow reschedule
+};
+
+// ── Sub-documents ────────────────────────────────────────────────────────────
+
+export interface InsuranceDetails {
+  provider: string | null;
+  policyNumber: string | null;
 }
 
-export type AppointmentStatus = "scheduled" | "completed" | "cancelled" | "no-show";
+export interface Billing {
+  amount: number;
+  status: BillingStatus;
+  insuranceDetails: InsuranceDetails;
+}
+
+// ── Main entity ──────────────────────────────────────────────────────────────
+
+export interface Appointment {
+  id: string;
+  patientId: string;
+  clinicianId: string;
+  appointmentType: AppointmentType;
+  status: AppointmentStatus;
+  scheduledAt: Date;
+  duration: number; // minutes
+  location: LocationOption;
+  notes: string;
+  billing: Billing;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// ── Populated clinician ──────────────────────────────────────────────────
+
+export interface PopulatedClinician {
+  id: string;
+  name: string;
+  specialization: string;
+  department: string;
+  contactInfo: string;
+}
+
+export interface PopulatedAppointment extends Omit<Appointment, "clinicianId"> {
+  clinicianId: PopulatedClinician;
+}
+
+// ── DTOs ─────────────────────────────────────────────────────────────────────
 
 export interface CreateAppointmentDTO {
-  patient_name: string;
-  doctor_name: string;
-  appointment_date: string;
-  appointment_time: string;
+  patientId: string;
+  clinicianId: string;
+  appointmentType: AppointmentType;
   status?: AppointmentStatus;
-  reason: string;
+  scheduledAt: string; // ISO-8601
+  duration: number;
+  location: LocationOption;
+  notes?: string;
+  billing?: {
+    amount?: number;
+    status?: BillingStatus;
+    insuranceDetails?: {
+      provider?: string | null;
+      policyNumber?: string | null;
+    };
+  };
 }
 
 export interface UpdateAppointmentDTO {
-  patient_name?: string;
-  doctor_name?: string;
-  appointment_date?: string;
-  appointment_time?: string;
+  patientId?: string;
+  clinicianId?: string;
+  appointmentType?: AppointmentType;
   status?: AppointmentStatus;
-  reason?: string;
+  scheduledAt?: string;
+  duration?: number;
+  location?: LocationOption;
+  notes?: string;
+  billing?: {
+    amount?: number;
+    status?: BillingStatus;
+    insuranceDetails?: {
+      provider?: string | null;
+      policyNumber?: string | null;
+    };
+  };
 }
+
+export interface UpdateStatusDTO {
+  status: AppointmentStatus;
+}
+
+// ── Query / Pagination ───────────────────────────────────────────────────────
 
 export interface AppointmentQuery {
   page?: number;
   limit?: number;
   status?: AppointmentStatus;
-  doctor_name?: string;
-  patient_name?: string;
-  date?: string;
+  clinicianId?: string;
+  patientId?: string;
+  appointmentType?: AppointmentType;
+  from?: string; // ISO date lower-bound for scheduledAt
+  to?: string;   // ISO date upper-bound for scheduledAt
 }
 
 export interface PaginatedResponse<T> {
