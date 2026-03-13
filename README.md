@@ -9,6 +9,8 @@ A REST API for managing clinical appointments, built with **Node.js**, **Express
 - Clinician listing for quick ID lookup
 - Double-booking prevention (overlap detection)
 - Referential integrity checks (clinician & patient must exist)
+- Clinical analytics with customizable filters and aggregation
+- Export analytics as CSV or PDF
 - Pagination, filtering, and date-range queries
 - Clinician population (expand clinician details in appointment responses)
 - Interactive Swagger UI documentation
@@ -53,10 +55,14 @@ PORT=3000
 ### Seed Test Data (Optional)
 
 ```bash
+# Seed clinician & patient
 npx ts-node src/scripts/seedTestData.ts
+
+# Seed analytics test records
+npx ts-node src/scripts/seedAnalyticsData.ts
 ```
 
-This creates a test clinician and patient, printing their IDs for use in API requests.
+This creates test data and prints IDs for use in API requests.
 
 ### Run
 
@@ -90,8 +96,15 @@ http://localhost:3000/api-docs
 | `PUT` | `/api/appointments/:id` | Update appointment |
 | `PATCH` | `/api/appointments/:id/status` | Update appointment status |
 | `DELETE` | `/api/appointments/:id` | Delete appointment |
+| `GET` | `/api/analytics` | Fetch analytics (paginated, filterable) |
+| `GET` | `/api/analytics/summary` | Metric summary counts |
+| `GET` | `/api/analytics/:id` | Get analytics record by ID |
+| `POST` | `/api/analytics` | Create analytics record |
+| `PUT` | `/api/analytics/:id` | Update analytics record |
+| `DELETE` | `/api/analytics/:id` | Delete analytics record |
+| `POST` | `/api/analytics/export` | Export analytics as CSV or PDF |
 
-See [API_ENDPOINTS_DOCUMENTATION.md](API_ENDPOINTS_DOCUMENTATION.md) for detailed usage with examples.
+See [docs/ANALYTICS_ENDPOINTS.md](docs/ANALYTICS_ENDPOINTS.md) for detailed analytics usage with examples.
 
 ## Project Structure
 

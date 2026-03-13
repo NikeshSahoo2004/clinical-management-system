@@ -1,7 +1,8 @@
 {
   "name": "clinical-management-system",
   "version": "1.0.0",
-  "description": "",
+  "description": "Clinical management system REST API",
+  "author": "Nikesh Sahoo",
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
@@ -24,14 +25,18 @@
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "json2csv": "^6.0.0-alpha.2",
     "mongoose": "^8.9.0",
+    "pdfkit": "^0.17.2",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/json2csv": "^5.0.7",
     "@types/node": "^25.4.0",
+    "@types/pdfkit": "^0.17.5",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "nodemon": "^3.1.14",

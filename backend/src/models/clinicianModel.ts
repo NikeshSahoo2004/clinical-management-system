@@ -1,12 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-/**
- * Minimal Clinician model – registered so that Mongoose `.populate('clinicianId')`
- * can resolve references from the appointments collection.
- *
- * The schema is intentionally relaxed (`strict: false`) so it can read whatever
- * fields exist in the clinicians collection without needing an exhaustive definition.
- */
+// Minimal model registered so Mongoose can `.populate('clinicianId')` from appointments.
+// strict: false lets it read whatever shape is in the clinicians collection.
 
 export interface ClinicianDocument extends Document {
   _id: mongoose.Types.ObjectId;
@@ -77,9 +72,6 @@ const clinicianSchema = new Schema<ClinicianDocument>(
   }
 );
 
-const ClinicianModel = mongoose.model<ClinicianDocument>(
-  "Clinician",
-  clinicianSchema
-);
+const ClinicianModel = mongoose.model<ClinicianDocument>("Clinician", clinicianSchema);
 
 export default ClinicianModel;

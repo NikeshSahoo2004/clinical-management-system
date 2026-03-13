@@ -14,17 +14,15 @@ import {
   MAX_DURATION,
 } from "../types/appointmentTypes";
 
-// ── Document interface ───────────────────────────────────────────────────────
 
 export interface AppointmentDocument
   extends Omit<Appointment, "id" | "patientId" | "clinicianId">,
-    Document {
+  Document {
   _id: mongoose.Types.ObjectId;
   patientId: mongoose.Types.ObjectId;
   clinicianId: mongoose.Types.ObjectId;
 }
 
-// ── Sub-schemas ──────────────────────────────────────────────────────────────
 
 const insuranceDetailsSchema = new Schema(
   {
@@ -47,7 +45,6 @@ const billingSchema = new Schema(
   { _id: false }
 );
 
-// ── Main schema ──────────────────────────────────────────────────────────────
 
 const appointmentSchema = new Schema<AppointmentDocument>(
   {
@@ -129,7 +126,6 @@ const appointmentSchema = new Schema<AppointmentDocument>(
   }
 );
 
-// ── Indexes ──────────────────────────────────────────────────────────────────
 
 appointmentSchema.index({ patientId: 1 });
 appointmentSchema.index({ clinicianId: 1 });
@@ -137,15 +133,7 @@ appointmentSchema.index({ scheduledAt: 1 });
 appointmentSchema.index({ clinicianId: 1, scheduledAt: 1 }); // compound index to prevent double booking
 appointmentSchema.index({ status: 1 });
 
-// ── Referential integrity ────────────────────────────────────────────────────
-
-/**
- * Verify that a clinician document exists in the clinicians collection.
- * Uses a direct collection lookup (db.clinicians.findOne({ _id: clinicianId }))
- * so the Clinician model need not be imported into this module.
- *
- * Ensures referential consistency at the application level.
- */
+// Direct collection lookups so we don't need to import Patient/Clinician models here
 async function verifyClinicianExists(
   clinicianId: mongoose.Types.ObjectId | string
 ): Promise<void> {
@@ -170,10 +158,7 @@ async function verifyClinicianExists(
   }
 }
 
-/**
- * Verify that a patient document exists in the patients collection.
- * Uses a direct collection lookup so the Patient model need not be imported.
- */
+
 async function verifyPatientExists(
   patientId: mongoose.Types.ObjectId | string
 ): Promise<void> {
@@ -198,24 +183,16 @@ async function verifyPatientExists(
   }
 }
 
-/**
- * Pre-save hook – ensures both the referenced clinician and patient exist
- * in their respective collections before every insert or save,
- * enforcing referential consistency at the application level.
- */
+// Enforce referential integrity on create — reject unknown clinician/patient IDs
 appointmentSchema.pre("save", async function () {
   await verifyClinicianExists(this.clinicianId);
   await verifyPatientExists(this.patientId);
 });
 
-// ── Model ────────────────────────────────────────────────────────────────────
-
 const AppointmentModel = mongoose.model<AppointmentDocument>(
   "Appointment",
   appointmentSchema
 );
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function toAppointment(doc: AppointmentDocument): Appointment {
   const obj = doc.toJSON();
@@ -242,7 +219,6 @@ function toAppointment(doc: AppointmentDocument): Appointment {
   };
 }
 
-// ── Populated helper ─────────────────────────────────────────────────────────
 
 function toPopulatedAppointment(doc: any): PopulatedAppointment {
   const obj = doc.toJSON();
@@ -253,14 +229,14 @@ function toPopulatedAppointment(doc: any): PopulatedAppointment {
     clinicianId:
       clinician && typeof clinician === "object"
         ? {
-            id: clinician.id ?? clinician._id?.toString(),
-            name: clinician.name
-              ? `${clinician.name.title ?? ""} ${clinician.name.firstName ?? ""} ${clinician.name.lastName ?? ""}`.trim()
-              : "",
-            specialization: clinician.credentials?.specialty ?? "",
-            department: clinician.availability?.[0]?.location ?? "",
-            contactInfo: clinician.contact?.email ?? "",
-          }
+          id: clinician.id ?? clinician._id?.toString(),
+          name: clinician.name
+            ? `${clinician.name.title ?? ""} ${clinician.name.firstName ?? ""} ${clinician.name.lastName ?? ""}`.trim()
+            : "",
+          specialization: clinician.credentials?.specialty ?? "",
+          department: clinician.availability?.[0]?.location ?? "",
+          contactInfo: clinician.contact?.email ?? "",
+        }
         : (clinician as any), // fallback when not populated
     appointmentType: obj.appointmentType,
     status: obj.status,
@@ -281,17 +257,7 @@ function toPopulatedAppointment(doc: any): PopulatedAppointment {
   };
 }
 
-// ── Overlap detection ────────────────────────────────────────────────────────
-
-/**
- * Check whether a clinician already has an overlapping appointment
- * in the given time window. Returns true if a conflict exists.
- *
- * @param clinicianId - The clinician to check
- * @param scheduledAt - Start of the proposed appointment
- * @param duration    - Duration in minutes
- * @param excludeId   - Appointment ID to exclude (for updates)
- */
+// Returns true if the clinician has a conflicting appointment in the requested window
 export async function hasOverlap(
   clinicianId: string,
   scheduledAt: Date,
@@ -336,36 +302,49 @@ export async function hasOverlap(
   return conflict !== null;
 }
 
-// ── Data-access functions ────────────────────────────────────────────────────
 
 export async function initializeTable(): Promise<void> {
   await AppointmentModel.ensureIndexes();
 }
 
-export async function findAll(
-  limit: number,
-  offset: number,
-  filters: {
-    status?: string;
-    clinicianId?: string;
-    patientId?: string;
-    appointmentType?: string;
-    from?: string;
-    to?: string;
-  }
-): Promise<{ rows: Appointment[]; total: number }> {
+export interface AppointmentFilters {
+  status?: string;
+  clinicianId?: string;
+  patientId?: string;
+  appointmentType?: string;
+  location?: string;
+  billingStatus?: string;
+  from?: string;
+  to?: string;
+}
+
+export function buildAppointmentQuery(
+  filters: AppointmentFilters
+): Record<string, any> {
   const query: Record<string, any> = {};
 
   if (filters.status) query.status = filters.status;
   if (filters.clinicianId) query.clinicianId = filters.clinicianId;
   if (filters.patientId) query.patientId = filters.patientId;
   if (filters.appointmentType) query.appointmentType = filters.appointmentType;
+  if (filters.location) query.location = filters.location;
+  if (filters.billingStatus) query["billing.status"] = filters.billingStatus;
 
   if (filters.from || filters.to) {
     query.scheduledAt = {};
     if (filters.from) query.scheduledAt.$gte = new Date(filters.from);
     if (filters.to) query.scheduledAt.$lte = new Date(filters.to);
   }
+
+  return query;
+}
+
+export async function findAll(
+  limit: number,
+  offset: number,
+  filters: AppointmentFilters
+): Promise<{ rows: Appointment[]; total: number }> {
+  const query = buildAppointmentQuery(filters);
 
   const total = await AppointmentModel.countDocuments(query);
 
@@ -494,15 +473,7 @@ export async function remove(id: string): Promise<boolean> {
   }
 }
 
-// ── Populated queries ────────────────────────────────────────────────────────
 
-/**
- * Example populated query – fetches an appointment and populates clinician
- * details (name, specialization, department, contactInfo).
- *
- * Usage:
- *   const appt = await findByIdPopulated("507f1f77bcf86cd799439011");
- */
 export async function findByIdPopulated(
   id: string
 ): Promise<PopulatedAppointment | null> {
@@ -520,27 +491,9 @@ export async function findByIdPopulated(
 export async function findAllPopulated(
   limit: number,
   offset: number,
-  filters: {
-    status?: string;
-    clinicianId?: string;
-    patientId?: string;
-    appointmentType?: string;
-    from?: string;
-    to?: string;
-  }
+  filters: AppointmentFilters
 ): Promise<{ rows: PopulatedAppointment[]; total: number }> {
-  const query: Record<string, any> = {};
-
-  if (filters.status) query.status = filters.status;
-  if (filters.clinicianId) query.clinicianId = filters.clinicianId;
-  if (filters.patientId) query.patientId = filters.patientId;
-  if (filters.appointmentType) query.appointmentType = filters.appointmentType;
-
-  if (filters.from || filters.to) {
-    query.scheduledAt = {};
-    if (filters.from) query.scheduledAt.$gte = new Date(filters.from);
-    if (filters.to) query.scheduledAt.$lte = new Date(filters.to);
-  }
+  const query = buildAppointmentQuery(filters);
 
   const total = await AppointmentModel.countDocuments(query);
 
@@ -553,6 +506,15 @@ export async function findAllPopulated(
 
   const rows = docs.map(toPopulatedAppointment);
   return { rows, total };
+}
+
+export async function findForAnalytics(
+  filters: AppointmentFilters
+): Promise<Appointment[]> {
+  const query = buildAppointmentQuery(filters);
+
+  const docs = await AppointmentModel.find(query).sort({ scheduledAt: 1 }).exec();
+  return docs.map(toAppointment);
 }
 
 export default AppointmentModel;

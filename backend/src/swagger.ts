@@ -32,6 +32,10 @@ const options: swaggerJsdoc.Options = {
         name: "Clinicians",
         description: "Read-only access to the clinicians collection",
       },
+      {
+        name: "Analytics",
+        description: "Clinical analytics, reporting, and data export",
+      },
     ],
     paths: {
       "/health": {
@@ -377,6 +381,215 @@ const options: swaggerJsdoc.Options = {
             updatedAt: "2026-03-11T08:00:00.000Z",
           },
         },
+        ClinicalAnalytics: {
+          type: "object",
+          description: "Persisted analytics snapshot generated from appointment data",
+          properties: {
+            id: {
+              type: "string",
+              description: "MongoDB ObjectId",
+              example: "507f1f77bcf86cd799439099",
+            },
+            signature: {
+              type: "string",
+              description: "Deterministic signature derived from the filter set (built from the raw query values before normalization)",
+              example: "[[\"endDate\",\"2026-03-31\"],[\"startDate\",\"2026-03-01\"]]",
+            },
+            filters: {
+              type: "object",
+              description: "Filters used to generate the snapshot. startDate and endDate are stored as fully normalized ISO-8601 datetimes.",
+              properties: {
+                startDate: {
+                  type: "string",
+                  format: "date-time",
+                  nullable: true,
+                  description: "Normalized to T00:00:00.000Z when a date-only value was supplied",
+                  example: "2026-03-01T00:00:00.000Z",
+                },
+                endDate: {
+                  type: "string",
+                  format: "date-time",
+                  nullable: true,
+                  description: "Normalized to T23:59:59.999Z when a date-only value was supplied",
+                  example: "2026-03-31T23:59:59.999Z",
+                },
+                status: {
+                  type: "string",
+                  enum: ["Scheduled", "Completed", "Cancelled"],
+                  nullable: true,
+                },
+                clinicianId: { type: "string", nullable: true },
+                patientId: { type: "string", nullable: true },
+                appointmentType: {
+                  type: "string",
+                  enum: ["Consultation", "Follow-up", "Procedure"],
+                  nullable: true,
+                },
+                location: {
+                  type: "string",
+                  enum: ["Main Clinic", "Telehealth", "Branch Clinic"],
+                  nullable: true,
+                },
+                billingStatus: {
+                  type: "string",
+                  enum: ["Pending", "Paid", "Insured"],
+                  nullable: true,
+                },
+              },
+            },
+            appointmentIds: {
+              type: "array",
+              items: { type: "string" },
+            },
+            summary: {
+              $ref: "#/components/schemas/ClinicalAnalyticsSummary",
+            },
+            breakdowns: {
+              $ref: "#/components/schemas/ClinicalAnalyticsBreakdowns",
+            },
+            generatedAt: { type: "string", format: "date-time" },
+            createdAt: { type: "string", format: "date-time" },
+            updatedAt: { type: "string", format: "date-time" },
+          },
+        },
+        ClinicalAnalyticsSummary: {
+          type: "object",
+          properties: {
+            totalAppointments: { type: "integer", example: 12 },
+            totalDurationMinutes: { type: "integer", example: 420 },
+            averageDurationMinutes: { type: "number", example: 35 },
+            totalBillingAmount: { type: "number", example: 2250 },
+            averageBillingAmount: { type: "number", example: 187.5 },
+            scheduledAppointments: { type: "integer", example: 4 },
+            completedAppointments: { type: "integer", example: 6 },
+            cancelledAppointments: { type: "integer", example: 2 },
+            paidAppointments: { type: "integer", example: 5 },
+            pendingAppointments: { type: "integer", example: 4 },
+            insuredAppointments: { type: "integer", example: 3 },
+          },
+        },
+        AnalyticsBreakdownItem: {
+          type: "object",
+          properties: {
+            label: { type: "string", example: "Completed" },
+            count: { type: "integer", example: 6 },
+          },
+        },
+        ClinicalAnalyticsBreakdowns: {
+          type: "object",
+          properties: {
+            byStatus: {
+              type: "array",
+              items: { $ref: "#/components/schemas/AnalyticsBreakdownItem" },
+            },
+            byAppointmentType: {
+              type: "array",
+              items: { $ref: "#/components/schemas/AnalyticsBreakdownItem" },
+            },
+            byLocation: {
+              type: "array",
+              items: { $ref: "#/components/schemas/AnalyticsBreakdownItem" },
+            },
+            byBillingStatus: {
+              type: "array",
+              items: { $ref: "#/components/schemas/AnalyticsBreakdownItem" },
+            },
+          },
+        },
+        AnalyticsExportBody: {
+          type: "object",
+          description: "All fields are optional. Omit entirely to export all appointments.",
+          properties: {
+            startDate: {
+              type: "string",
+              description: "Accepts YYYY-MM-DD or ISO-8601 datetime. Expanded to T00:00:00.000Z when date-only.",
+              example: "2026-01-01",
+            },
+            endDate: {
+              type: "string",
+              description: "Accepts YYYY-MM-DD or ISO-8601 datetime. Expanded to T23:59:59.999Z when date-only.",
+              example: "2026-03-31",
+            },
+            status: {
+              type: "string",
+              enum: ["Scheduled", "Completed", "Cancelled"],
+            },
+            clinicianId: { type: "string", description: "MongoDB ObjectId" },
+            patientId: { type: "string", description: "MongoDB ObjectId" },
+            appointmentType: {
+              type: "string",
+              enum: ["Consultation", "Follow-up", "Procedure"],
+            },
+            location: {
+              type: "string",
+              enum: ["Main Clinic", "Telehealth", "Branch Clinic"],
+            },
+            billingStatus: {
+              type: "string",
+              enum: ["Pending", "Paid", "Insured"],
+            },
+          },
+        },
+        ClinicalAnalyticsResponse: {
+
+          type: "object",
+          properties: {
+            filters: {
+              type: "object",
+              description: "Echo of the applied filters. startDate and endDate reflect the normalized datetimes used for querying.",
+              properties: {
+                startDate: {
+                  type: "string",
+                  nullable: true,
+                  description: "Accepts YYYY-MM-DD or ISO-8601 datetime. YYYY-MM-DD is normalized to T00:00:00.000Z.",
+                  example: "2026-03-01T00:00:00.000Z",
+                },
+                endDate: {
+                  type: "string",
+                  nullable: true,
+                  description: "Accepts YYYY-MM-DD or ISO-8601 datetime. YYYY-MM-DD is normalized to T23:59:59.999Z.",
+                  example: "2026-03-31T23:59:59.999Z",
+                },
+                status: {
+                  type: "string",
+                  enum: ["Scheduled", "Completed", "Cancelled"],
+                  nullable: true,
+                },
+                clinicianId: { type: "string", nullable: true },
+                patientId: { type: "string", nullable: true },
+                appointmentType: {
+                  type: "string",
+                  enum: ["Consultation", "Follow-up", "Procedure"],
+                  nullable: true,
+                },
+                location: {
+                  type: "string",
+                  enum: ["Main Clinic", "Telehealth", "Branch Clinic"],
+                  nullable: true,
+                },
+                billingStatus: {
+                  type: "string",
+                  enum: ["Pending", "Paid", "Insured"],
+                  nullable: true,
+                },
+              },
+            },
+            summary: {
+              $ref: "#/components/schemas/ClinicalAnalyticsSummary",
+            },
+            breakdowns: {
+              $ref: "#/components/schemas/ClinicalAnalyticsBreakdowns",
+            },
+            appointments: {
+              type: "array",
+              items: { $ref: "#/components/schemas/Appointment" },
+            },
+            snapshot: {
+              $ref: "#/components/schemas/ClinicalAnalytics",
+            },
+          },
+        },
+
         ErrorResponse: {
           type: "object",
           properties: {
@@ -392,6 +605,9 @@ const options: swaggerJsdoc.Options = {
               example: [
                 "patientId is required and must be a valid ObjectId",
                 "scheduledAt must be a current or future date/time",
+                "startDate must be a valid date (YYYY-MM-DD) or ISO-8601 datetime",
+                "endDate must be a valid date (YYYY-MM-DD) or ISO-8601 datetime",
+                "startDate must be earlier than or equal to endDate",
               ],
             },
           },

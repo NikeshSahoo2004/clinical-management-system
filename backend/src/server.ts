@@ -13,7 +13,7 @@ async function start(): Promise<void> {
     await initializeTable();
 
     app.listen(PORT, () => {
-      console.log(`🚀Server is running on http://localhost:${PORT}`);
+      console.log(`🚀  Server running on http://localhost:${PORT}`);
     });
   } catch (error) {
     console.error("Failed to start server:", error);

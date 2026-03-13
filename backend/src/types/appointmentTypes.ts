@@ -1,5 +1,3 @@
-// ── Enums ────────────────────────────────────────────────────────────────────
-
 export const APPOINTMENT_TYPES = ["Consultation", "Follow-up", "Procedure"] as const;
 export type AppointmentType = (typeof APPOINTMENT_TYPES)[number];
 
@@ -16,11 +14,9 @@ export const MAX_DURATION = 480; // 8 hours in minutes
 
 export const VALID_STATUS_TRANSITIONS: Record<AppointmentStatus, readonly AppointmentStatus[]> = {
   Scheduled: ["Completed", "Cancelled"],
-  Completed: [],           // terminal state
-  Cancelled: ["Scheduled"], // allow reschedule
+  Completed: [],            // terminal
+  Cancelled: ["Scheduled"], // allow re-scheduling
 };
-
-// ── Sub-documents ────────────────────────────────────────────────────────────
 
 export interface InsuranceDetails {
   provider: string | null;
@@ -32,8 +28,6 @@ export interface Billing {
   status: BillingStatus;
   insuranceDetails: InsuranceDetails;
 }
-
-// ── Main entity ──────────────────────────────────────────────────────────────
 
 export interface Appointment {
   id: string;
@@ -50,8 +44,6 @@ export interface Appointment {
   updatedAt: Date;
 }
 
-// ── Populated clinician ──────────────────────────────────────────────────
-
 export interface PopulatedClinician {
   id: string;
   name: string;
@@ -63,8 +55,6 @@ export interface PopulatedClinician {
 export interface PopulatedAppointment extends Omit<Appointment, "clinicianId"> {
   clinicianId: PopulatedClinician;
 }
-
-// ── DTOs ─────────────────────────────────────────────────────────────────────
 
 export interface CreateAppointmentDTO {
   patientId: string;
@@ -108,8 +98,6 @@ export interface UpdateStatusDTO {
   status: AppointmentStatus;
 }
 
-// ── Query / Pagination ───────────────────────────────────────────────────────
-
 export interface AppointmentQuery {
   page?: number;
   limit?: number;
@@ -117,8 +105,8 @@ export interface AppointmentQuery {
   clinicianId?: string;
   patientId?: string;
   appointmentType?: AppointmentType;
-  from?: string; // ISO date lower-bound for scheduledAt
-  to?: string;   // ISO date upper-bound for scheduledAt
+  from?: string; // ISO lower-bound for scheduledAt
+  to?: string;   // ISO upper-bound for scheduledAt
 }
 
 export interface PaginatedResponse<T> {

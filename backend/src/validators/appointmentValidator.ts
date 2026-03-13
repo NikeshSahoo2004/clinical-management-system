@@ -6,13 +6,7 @@ import {
   BILLING_STATUSES,
   LOCATION_OPTIONS,
   MAX_DURATION,
-  AppointmentType,
-  AppointmentStatus,
-  BillingStatus,
-  LocationOption,
 } from "../types/appointmentTypes";
-
-// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function isObjectId(val: unknown): boolean {
   return typeof val === "string" && mongoose.Types.ObjectId.isValid(val);
@@ -20,22 +14,14 @@ function isObjectId(val: unknown): boolean {
 
 function isISODate(val: unknown): boolean {
   if (typeof val !== "string") return false;
-  const d = new Date(val);
-  return !isNaN(d.getTime());
+  return !isNaN(new Date(val).getTime());
 }
 
 function isFutureDate(val: string): boolean {
   return new Date(val) >= new Date();
 }
 
-function validateBillingFields(
-  billing: Record<string, any>,
-  errors: string[],
-  requireAmount = false
-): void {
-  if (requireAmount && billing.amount === undefined) {
-    // amount is optional on create – Mongoose defaults to 0
-  }
+function validateBillingFields(billing: Record<string, any>, errors: string[]): void {
   if (billing.amount !== undefined) {
     if (typeof billing.amount !== "number" || billing.amount < 0) {
       errors.push("billing.amount must be a non-negative number");
@@ -51,94 +37,48 @@ function validateBillingFields(
       errors.push("billing.insuranceDetails must be an object");
     } else {
       const ins = billing.insuranceDetails;
-      if (
-        ins.provider !== undefined &&
-        ins.provider !== null &&
-        typeof ins.provider !== "string"
-      ) {
+      if (ins.provider !== undefined && ins.provider !== null && typeof ins.provider !== "string") {
         errors.push("billing.insuranceDetails.provider must be a string or null");
       }
-      if (
-        ins.policyNumber !== undefined &&
-        ins.policyNumber !== null &&
-        typeof ins.policyNumber !== "string"
-      ) {
+      if (ins.policyNumber !== undefined && ins.policyNumber !== null && typeof ins.policyNumber !== "string") {
         errors.push("billing.insuranceDetails.policyNumber must be a string or null");
       }
     }
   }
 }
 
-// ── Create ───────────────────────────────────────────────────────────────────
-
-export function validateCreateAppointment(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
-  const {
-    patientId,
-    clinicianId,
-    appointmentType,
-    status,
-    scheduledAt,
-    duration,
-    location,
-    notes,
-    billing,
-  } = req.body;
-
+export function validateCreateAppointment(req: Request, res: Response, next: NextFunction): void {
+  const { patientId, clinicianId, appointmentType, status, scheduledAt, duration, location, notes, billing } = req.body;
   const errors: string[] = [];
 
-  // Required ObjectId refs
   if (!patientId || !isObjectId(patientId)) {
     errors.push("patientId is required and must be a valid ObjectId");
   }
   if (!clinicianId || !isObjectId(clinicianId)) {
     errors.push("clinicianId is required and must be a valid ObjectId");
   }
-
-  // appointmentType
-  if (
-    !appointmentType ||
-    !(APPOINTMENT_TYPES as readonly string[]).includes(appointmentType)
-  ) {
+  if (!appointmentType || !(APPOINTMENT_TYPES as readonly string[]).includes(appointmentType)) {
     errors.push(`appointmentType is required and must be one of: ${APPOINTMENT_TYPES.join(", ")}`);
   }
-
-  // status (optional on create)
-  if (
-    status !== undefined &&
-    !(APPOINTMENT_STATUSES as readonly string[]).includes(status)
-  ) {
+  if (status !== undefined && !(APPOINTMENT_STATUSES as readonly string[]).includes(status)) {
     errors.push(`status must be one of: ${APPOINTMENT_STATUSES.join(", ")}`);
   }
-
-  // scheduledAt
   if (!scheduledAt || !isISODate(scheduledAt)) {
     errors.push("scheduledAt is required and must be a valid ISO-8601 date string");
   } else if (!isFutureDate(scheduledAt)) {
     errors.push("scheduledAt must be a current or future date/time");
   }
-
-  // duration
   if (duration === undefined || typeof duration !== "number" || duration < 5) {
     errors.push("duration is required and must be at least 5 minutes");
   } else if (duration > MAX_DURATION) {
     errors.push(`duration must not exceed ${MAX_DURATION} minutes`);
   }
-
-  // location
   if (!location || !(LOCATION_OPTIONS as readonly string[]).includes(location)) {
     errors.push(`location is required and must be one of: ${LOCATION_OPTIONS.join(", ")}`);
   }
-
-  // notes (optional)
   if (notes !== undefined && typeof notes !== "string") {
     errors.push("notes must be a string");
   }
-
-  // billing (optional nested)
   if (billing !== undefined) {
     if (typeof billing !== "object" || billing === null) {
       errors.push("billing must be an object");
@@ -151,29 +91,11 @@ export function validateCreateAppointment(
     res.status(400).json({ errors });
     return;
   }
-
   next();
 }
 
-// ── Update (PUT) ─────────────────────────────────────────────────────────────
-
-export function validateUpdateAppointment(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
-  const {
-    patientId,
-    clinicianId,
-    appointmentType,
-    status,
-    scheduledAt,
-    duration,
-    location,
-    notes,
-    billing,
-  } = req.body;
-
+export function validateUpdateAppointment(req: Request, res: Response, next: NextFunction): void {
+  const { patientId, clinicianId, appointmentType, status, scheduledAt, duration, location, notes, billing } = req.body;
   const errors: string[] = [];
 
   if (patientId !== undefined && !isObjectId(patientId)) {
@@ -182,16 +104,10 @@ export function validateUpdateAppointment(
   if (clinicianId !== undefined && !isObjectId(clinicianId)) {
     errors.push("clinicianId must be a valid ObjectId");
   }
-  if (
-    appointmentType !== undefined &&
-    !(APPOINTMENT_TYPES as readonly string[]).includes(appointmentType)
-  ) {
+  if (appointmentType !== undefined && !(APPOINTMENT_TYPES as readonly string[]).includes(appointmentType)) {
     errors.push(`appointmentType must be one of: ${APPOINTMENT_TYPES.join(", ")}`);
   }
-  if (
-    status !== undefined &&
-    !(APPOINTMENT_STATUSES as readonly string[]).includes(status)
-  ) {
+  if (status !== undefined && !(APPOINTMENT_STATUSES as readonly string[]).includes(status)) {
     errors.push(`status must be one of: ${APPOINTMENT_STATUSES.join(", ")}`);
   }
   if (scheduledAt !== undefined) {
@@ -208,10 +124,7 @@ export function validateUpdateAppointment(
       errors.push(`duration must not exceed ${MAX_DURATION} minutes`);
     }
   }
-  if (
-    location !== undefined &&
-    !(LOCATION_OPTIONS as readonly string[]).includes(location)
-  ) {
+  if (location !== undefined && !(LOCATION_OPTIONS as readonly string[]).includes(location)) {
     errors.push(`location must be one of: ${LOCATION_OPTIONS.join(", ")}`);
   }
   if (notes !== undefined && typeof notes !== "string") {
@@ -229,17 +142,10 @@ export function validateUpdateAppointment(
     res.status(400).json({ errors });
     return;
   }
-
   next();
 }
 
-// ── PATCH status ─────────────────────────────────────────────────────────────
-
-export function validateStatusUpdate(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function validateStatusUpdate(req: Request, res: Response, next: NextFunction): void {
   const { status } = req.body;
   const errors: string[] = [];
 
@@ -251,22 +157,13 @@ export function validateStatusUpdate(
     res.status(400).json({ errors });
     return;
   }
-
   next();
 }
 
-// ── ID param ─────────────────────────────────────────────────────────────────
-
-export function validateIdParam(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function validateIdParam(req: Request, res: Response, next: NextFunction): void {
   const id = req.params.id as string;
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-    res
-      .status(400)
-      .json({ error: "Invalid appointment ID. Must be a valid MongoDB ObjectId." });
+    res.status(400).json({ error: "Invalid appointment ID. Must be a valid MongoDB ObjectId." });
     return;
   }
   next();
