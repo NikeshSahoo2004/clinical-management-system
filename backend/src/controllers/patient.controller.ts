@@ -3,13 +3,22 @@ import * as patientService from "../services/patient.service";
 
 export const createPatient = async (req: Request, res: Response) => {
   try {
+
     const patient = await patientService.createPatient(req.body);
 
     res.status(201).json({
       message: "Patient created successfully",
       data: patient
     });
-  } catch (error) {
+
+  } catch (error: any) {
+
+    if (error.message === "Clinician ID is not present in the database") {
+      return res.status(400).json({
+        message: error.message
+      });
+    }
+
     res.status(500).json({
       message: "Error creating patient"
     });

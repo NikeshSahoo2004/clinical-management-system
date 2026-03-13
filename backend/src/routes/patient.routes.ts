@@ -112,4 +112,23 @@ router.get("/:id", getPatient);
 router.put("/:id", updatePatient);
 
 
+/**
+ * @swagger
+ * /patients/{id}:
+ *   delete:
+ *     summary: Delete patient
+ *     tags: [Patients]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Patient ID
+ *     responses:
+ *       200:
+ *         description: Patient deleted successfully
+ */
+router.delete("/:id", deletePatient);
+
 export default router;
