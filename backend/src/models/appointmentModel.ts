@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from "mongoose";
-import "./clinicianModel"; // Register Clinician model for .populate()
+import "./clinician.model"; // Register Clinician model for .populate()
 import {
   Appointment,
   PopulatedAppointment,
