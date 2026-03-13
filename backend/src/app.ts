@@ -7,6 +7,7 @@ import analyticsRoutes from "./routes/analyticsRoutes";
 import clinicianRoutes from "./routes/clinician.routes";
 import treatmentRoutes from "./routes/treatment.routes";
 import patientRoutes from "./routes/patient.routes";
+import authRoutes from "./routes/auth.routes";
 
 
 const app = express();
@@ -21,6 +22,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/clinicians", clinicianRoutes);
 app.use("/treatment-plans", treatmentRoutes);
 app.use("/patients", patientRoutes);
+app.use("/auth", authRoutes);
 
 /* Swagger Documentation */
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
