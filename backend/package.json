@@ -4,12 +4,7 @@
   "description": "Clinical management system REST API",
   "author": "Nikesh Sahoo",
   "main": "dist/server.js",
-  "scripts": {
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "dev": "nodemon --exec ts-node src/server.ts"
-  "description": "",
-  "main": "index.js",
+  "type": "commonjs",
   "scripts": {
     "dev": "nodemon src/server.ts",
     "build": "tsc",
@@ -20,9 +15,7 @@
     "url": "git+https://github.com/NikeshSahoo2004/clinical-management-system.git"
   },
   "keywords": [],
-  "author": "",
   "license": "ISC",
-  "type": "commonjs",
   "bugs": {
     "url": "https://github.com/NikeshSahoo2004/clinical-management-system/issues"
   },
@@ -30,23 +23,19 @@
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1",
+    "express": "^4.19.2",
     "json2csv": "^6.0.0-alpha.2",
     "mongoose": "^8.9.0",
     "pdfkit": "^0.17.2",
-    "mongoose": "^9.3.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
+    "@types/express": "^4.17.21",
     "@types/json2csv": "^5.0.7",
-    "@types/node": "^25.4.0",
+    "@types/node": "^20.12.7",
     "@types/pdfkit": "^0.17.5",
-    "@types/express": "^5.0.6",
-    "@types/mongoose": "^5.11.96",
-    "@types/node": "^25.4.0",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.8",
     "nodemon": "^3.1.14",
