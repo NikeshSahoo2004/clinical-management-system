@@ -508,13 +508,18 @@ export async function findAllPopulated(
   return { rows, total };
 }
 
+
+// Populates patient and clinician names for analytics export
 export async function findForAnalytics(
   filters: AppointmentFilters
-): Promise<Appointment[]> {
+): Promise<any[]> {
   const query = buildAppointmentQuery(filters);
-
-  const docs = await AppointmentModel.find(query).sort({ scheduledAt: 1 }).exec();
-  return docs.map(toAppointment);
+  const docs = await AppointmentModel.find(query)
+    .populate('patientId', 'name')
+    .populate('clinicianId', 'fullName name')
+    .sort({ scheduledAt: 1 })
+    .exec();
+  return docs;
 }
 
 export default AppointmentModel;

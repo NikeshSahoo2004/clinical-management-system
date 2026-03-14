@@ -45,7 +45,7 @@ app.use((_req: Request, res: Response) => {
 /* Global Error Handler */
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   res.status(500).json({
-    error: err.message || "Internal Server Error",
+    error: err.message || "Internal Server Error ",
   });
 });
 
