@@ -80,6 +80,77 @@ const options: swaggerJsdoc.Options = {
           },
         },
       },
+      "/api/clinicians": {
+        post: {
+          summary: "Register a new clinician",
+          tags: ["Clinicians"],
+          requestBody: {
+            required: true,
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    name: {
+                      type: "object",
+                      properties: {
+                        firstName: { type: "string", example: "John" },
+                        lastName: { type: "string", example: "Doe" },
+                        title: { type: "string", example: "Dr." }
+                      }
+                    },
+                    credentials: {
+                      type: "object",
+                      properties: {
+                        licenseNumber: { type: "string", example: "LIC12345" },
+                        specialty: { type: "string", example: "Cardiology" }
+                      }
+                    },
+                    contact: {
+                      type: "object",
+                      properties: {
+                        email: { type: "string", example: "john@example.com" },
+                        phone: { type: "string", example: "9876543210" },
+                        officeAddress: {
+                          type: "object",
+                          properties: {
+                            street: { type: "string", example: "123 Health Street" },
+                            city: { type: "string", example: "New York" },
+                            state: { type: "string", example: "NY" },
+                            postalCode: { type: "string", example: "10001" },
+                            country: { type: "string", example: "USA" }
+                          }
+                        }
+                      }
+                    },
+                    availability: {
+                      type: "array",
+                      items: {
+                        type: "object",
+                        properties: {
+                          dayOfWeek: { type: "string", example: "Monday" },
+                          startTime: { type: "string", example: "09:00" },
+                          endTime: { type: "string", example: "17:00" },
+                          location: { type: "string", example: "Main Clinic" }
+                        }
+                      }
+                    }
+                  },
+                  required: ["name", "credentials", "contact"]
+                }
+              }
+            }
+          },
+          responses: {
+            201: {
+              description: "Clinician created successfully"
+            },
+            400: {
+              description: "Validation error"
+            }
+          }
+        }
+      },
     },
 
     components: {
@@ -114,14 +185,53 @@ const options: swaggerJsdoc.Options = {
               type: "string",
               example: "507f1f77bcf86cd799439011",
             },
+            // For analytics/CSV export, these fields are replaced by names
+            patientName: {
+              type: "string",
+              description: "Patient's name (for analytics/CSV export)",
+              example: "John Doe"
+            },
+            clinicianName: {
+              type: "string",
+              description: "Clinician's name (for analytics/CSV export)",
+              example: "Dr. Jane Smith"
+            },
+            // For non-analytics endpoints, these fields are IDs
             patientId: {
               type: "string",
               example: "60d5ec49f1a2c72b8c8b4567",
+              description: "Patient ID (not present in analytics/CSV export)"
             },
             clinicianId: {
               type: "string",
               example: "60d5ec49f1a2c72b8c8b4568",
+              description: "Clinician ID (not present in analytics/CSV export)"
             },
+                      // Example for analytics/CSV export
+                      AnalyticsCsvExportExample: {
+                        type: "object",
+                        properties: {
+                          id: { type: "string", example: "507f1f77bcf86cd799439011" },
+                          patientName: { type: "string", example: "John Doe" },
+                          clinicianName: { type: "string", example: "Dr. Jane Smith" },
+                          appointmentType: { type: "string", example: "Consultation" },
+                          status: { type: "string", example: "Completed" },
+                          scheduledAt: { type: "string", example: "2026-03-11T10:00:00.000Z" },
+                          duration: { type: "integer", example: 30 },
+                          location: { type: "string", example: "Main Clinic" },
+                          notes: { type: "string", example: "Follow-up required" },
+                          billing: { $ref: "#/components/schemas/Billing" },
+                          createdAt: { type: "string", example: "2026-03-11T10:00:00.000Z" },
+                          updatedAt: { type: "string", example: "2026-03-11T10:30:00.000Z" }
+                        },
+                        description: "Example row for analytics/CSV export. Note the use of patientName and clinicianName."
+                      },
+              // --- Add to Analytics export endpoint description ---
+              // (Assuming /analytics/export or similar path exists in your routes)
+              // If not, add this to the analytics GET/POST endpoint that returns CSV or analytics data
+              //
+              // In the endpoint description:
+              // "Note: In analytics and CSV export, patientId and clinicianId fields will contain the patient and clinician names instead of just IDs."
             appointmentType: {
               type: "string",
               enum: ["Consultation", "Follow-up", "Procedure"],

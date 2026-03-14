@@ -192,8 +192,8 @@ export async function exportAnalyticsAsCsv(
   lines.push(
     csvRow([
       "id",
-      "patientId",
-      "clinicianId",
+      "Patient Name",
+      "Clinician Name",
       "appointmentType",
       "status",
       "scheduledAt",
@@ -210,11 +210,43 @@ export async function exportAnalyticsAsCsv(
   );
 
   for (const appt of appointments) {
+    // Get patient and clinician names
+    let patientName = '';
+    if (appt.patientId && typeof appt.patientId === 'object') {
+      // Try .name, fallback to .fullName, fallback to string
+      if (typeof appt.patientId.name === 'string') {
+        patientName = appt.patientId.name;
+      } else if (appt.patientId.name && typeof appt.patientId.name === 'object') {
+        const n = appt.patientId.name;
+        patientName = `${n.title ?? ''} ${n.firstName ?? ''} ${n.lastName ?? ''}`.trim();
+      } else if (typeof appt.patientId.fullName === 'string') {
+        patientName = appt.patientId.fullName;
+      } else if (appt.patientId.toString) {
+        patientName = appt.patientId.toString();
+      } else {
+        patientName = '';
+      }
+    } else {
+      patientName = appt.patientId || '';
+    }
+    let clinicianName = '';
+    if (appt.clinicianId && typeof appt.clinicianId === 'object') {
+      clinicianName = appt.clinicianId.fullName || '';
+      if (!clinicianName && appt.clinicianId.name) {
+        const n = appt.clinicianId.name;
+        clinicianName = `${n.title ?? ''} ${n.firstName ?? ''} ${n.lastName ?? ''}`.trim();
+      }
+      if (!clinicianName && appt.clinicianId.toString) {
+        clinicianName = appt.clinicianId.toString();
+      }
+    } else {
+      clinicianName = appt.clinicianId || '';
+    }
     lines.push(
       csvRow([
         appt.id,
-        appt.patientId,
-        appt.clinicianId,
+        patientName,
+        clinicianName,
         appt.appointmentType,
         appt.status,
         appt.scheduledAt instanceof Date
