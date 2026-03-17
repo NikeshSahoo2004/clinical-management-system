@@ -5,7 +5,7 @@ import app from "./app";
 import { connectDB } from "./db/db";
 import { initializeTable } from "./models/appointmentModel";
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT;
 
 async function start(): Promise<void> {
   try {

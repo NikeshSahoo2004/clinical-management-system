@@ -1,12 +1,34 @@
-import { TreatmentPlanInput } from "../types/treatment.types";
+import { Request, Response, NextFunction } from "express";
+import mongoose from "mongoose";
 
-export const validateTreatmentPlan = (data: TreatmentPlanInput) => {
+export const validateTreatmentPlan = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { patientId, clinicianId, diagnosis } = req.body;
+  const errors: string[] = [];
 
-  if (!data.patientId) throw new Error("Patient ID required");
+  // Mongoose Object Id Validations
+  if (!patientId) {
+    errors.push("Patient ID is required");
+  } else if (!mongoose.Types.ObjectId.isValid(patientId)) {
+    errors.push("Invalid Patient ID: Must be a valid MongoDB ObjectId");
+  }
 
-  if (!data.clinicianId) throw new Error("Clinician ID required");
+  if (!clinicianId) {
+    errors.push("Clinician ID is required");
+  } else if (!mongoose.Types.ObjectId.isValid(clinicianId)) {
+    errors.push("Invalid Clinician ID: Must be a valid MongoDB ObjectId");
+  }
 
-  if (!data.diagnosis) throw new Error("Diagnosis required");
+  // Required Field Validation
+  if (!diagnosis || diagnosis.trim() === "") {
+    errors.push("Diagnosis is required");
+  }
 
-  return true;
+  if (errors.length > 0) {
+    return res.status(400).json({ errors });
+  }
+  next();
 };

@@ -1,17 +1,28 @@
-import { ClinicianInput } from "../types/clinician.types";
+import { Request, Response, NextFunction } from "express";
 
-export const validateClinician = (data: ClinicianInput) => {
-  if (!data.firstName || !data.lastName) {
-    throw new Error("Name is required");
+export const validateClinician = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const { firstName, lastName, licenseNumber, specialty } = req.body;
+  const errors: string[] = [];
+
+  if (!firstName || !lastName || firstName.trim() === "" || lastName.trim() === "") {
+    errors.push("First name and Last name are required");
   }
 
-  if (!data.licenseNumber) {
-    throw new Error("License number required");
+  if (!licenseNumber || licenseNumber.trim() === "") {
+    errors.push("License number is required");
   }
 
-  if (!data.specialty) {
-    throw new Error("Specialty required");
+  if (!specialty || specialty.trim() === "") {
+    errors.push("Specialty is required");
   }
 
-  return true;
+  if (errors.length > 0) {
+    return res.status(400).json({ errors });
+  }
+
+  next();
 };

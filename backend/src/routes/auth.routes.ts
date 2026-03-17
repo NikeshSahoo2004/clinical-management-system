@@ -12,6 +12,7 @@ const router = Router();
  *   post:
  *     summary: Register a new clinician account
  *     tags: [Auth]
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:
@@ -82,6 +83,7 @@ router.post("/clinician/signup", signupClinician);
  *   post:
  *     summary: Login a clinician
  *     tags: [Auth]
+ *     security: []
  *     requestBody:
  *       required: true
  *       content:

@@ -5,7 +5,11 @@ import {
   updateAvailability
 } from "../controllers/clinician.controller";
 
+
+import { validateClinician } from "../validators/clinician.validator";
+
 const router = Router();
+
 
 /**
  * @swagger
@@ -89,7 +93,7 @@ const router = Router();
  *       201:
  *         description: Clinician created successfully
  */
-router.post("/", createClinician);
+router.post("/",validateClinician,createClinician);
 
 
 /**

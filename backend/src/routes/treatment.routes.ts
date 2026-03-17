@@ -5,6 +5,7 @@ import {
   updateTreatmentPlan
 } from "../controllers/treatment.controller";
 
+import { validateTreatmentPlan } from "../validators/treatment.validator";
 const router = Router();
 
 /**
@@ -100,7 +101,7 @@ const router = Router();
  *       201:
  *         description: Treatment plan created successfully
  */
-router.post("/", createTreatmentPlan);
+router.post("/", validateTreatmentPlan,createTreatmentPlan);
 
 
 /**
