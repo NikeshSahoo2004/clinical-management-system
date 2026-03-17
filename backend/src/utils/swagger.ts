@@ -14,13 +14,17 @@ const options: swaggerJsdoc.Options = {
         "Timestamps (`createdAt`, `updatedAt`) are managed automatically where present.",
       version: "2.0.0",
     },
-    servers: [
+        servers: [
       {
         url: "http://localhost:3000",
         description: "Local development server",
       },
     ],
-
+    security: [
+      {
+        BearerAuth: [],
+      },
+    ],
     tags: [
       {
         name: "Health",
@@ -154,6 +158,13 @@ const options: swaggerJsdoc.Options = {
     },
 
     components: {
+      securitySchemes: {
+        BearerAuth: {
+          type: "http",
+          scheme: "bearer",
+          bearerFormat: "JWT",
+        },
+      },
       schemas: {
         InsuranceDetails: {
           type: "object",

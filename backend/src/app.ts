@@ -9,6 +9,7 @@ import treatmentRoutes from "./routes/treatment.routes";
 import patientRoutes from "./routes/patient.routes";
 import authRoutes from "./routes/auth.routes";
 
+import { protectRoute } from "./middlewares/auth.middleware";
 
 const app = express();
 
@@ -17,12 +18,12 @@ app.use(cors({ origin: process.env.CORS_ORIGIN ?? "http://localhost:5173" }));
 app.use(express.json());
 
 /* Routes */
-app.use("/api/appointments", appointmentRoutes);
-app.use("/api/analytics", analyticsRoutes);
-app.use("/api/clinicians", clinicianRoutes);
-app.use("/treatment-plans", treatmentRoutes);
-app.use("/patients", patientRoutes);
-app.use("/auth", authRoutes);
+app.use("/auth", authRoutes); 
+app.use("/api/appointments", protectRoute, appointmentRoutes);
+app.use("/api/analytics", protectRoute, analyticsRoutes);
+app.use("/api/clinicians", protectRoute, clinicianRoutes);
+app.use("/treatment-plans", protectRoute, treatmentRoutes);
+app.use("/patients", protectRoute, patientRoutes);
 
 /* Swagger Documentation */
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
