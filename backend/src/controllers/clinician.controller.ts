@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 import * as clinicianService from "../services/clinician.service";
 
 export const createClinician = async (req: Request, res: Response) => {
@@ -22,7 +23,14 @@ export const createClinician = async (req: Request, res: Response) => {
 export const getClinician = async (req: Request, res: Response) => {
   try {
 
-    const id = String(req.params.id);
+    const { id } = req.params;
+
+    // Validate MongoDB ObjectId format before querying
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        message: "Invalid clinician ID format"
+      });
+    }
 
     const clinician = await clinicianService.getClinicianById(id);
 

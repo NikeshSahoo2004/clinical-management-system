@@ -2,6 +2,8 @@ import { Router } from "express";
 import {
   loginClinician,
   signupClinician,
+  refreshAccessToken,
+  logoutClinician
 } from "../controllers/auth.controller";
 
 const router = Router();
@@ -54,9 +56,12 @@ const router = Router();
  *                 message:
  *                   type: string
  *                   example: Clinician registered successfully
- *                 token:
+ *                 accessToken:
  *                   type: string
- *                   description: JWT token valid for 7 days
+ *                   description: Access token (short-lived)
+ *                 refreshToken:
+ *                   type: string
+ *                   description: Refresh token (long-lived)
  *                 clinician:
  *                   type: object
  *                   properties:
@@ -113,7 +118,9 @@ router.post("/clinician/signup", signupClinician);
  *                 message:
  *                   type: string
  *                   example: Login successful
- *                 token:
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
  *                   type: string
  *                 clinician:
  *                   type: object
@@ -134,6 +141,62 @@ router.post("/clinician/signup", signupClinician);
  *         description: Internal server error
  */
 router.post("/clinician/login", loginClinician);
+
+/**
+ * @swagger
+ * /auth/clinician/refresh:
+ *   post:
+ *     summary: Generate a new Access Token using Refresh Token
+ *     tags: [Auth]
+ *     security: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - refreshToken
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 example: "eyJhbGciOiJIUzI1NiIsInR..."
+ *     responses:
+ *       200:
+ *         description: New access token generated
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Token refreshed successfully
+ *                 accessToken:
+ *                   type: string
+ *                 refreshToken:
+ *                   type: string
+ *       400:
+ *         description: Missing refresh token
+ *       401:
+ *         description: Refresh token expired or invalid
+ *       500:
+ *         description: Internal server error
+ */
+router.post("/clinician/refresh", refreshAccessToken);
+
+/**
+ * @swagger
+ * /auth/clinician/logout:
+ *   post:
+ *     summary: Logout clinician and clear refresh token cookie
+ *     tags: [Auth]
+ *     security: []
+ *     responses:
+ *       200:
+ *         description: Logged out successfully
+ */
+router.post("/clinician/logout", logoutClinician);
 
 export default router;
 

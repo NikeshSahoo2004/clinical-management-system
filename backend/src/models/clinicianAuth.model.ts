@@ -4,6 +4,8 @@ export interface IClinicianAuth extends Document {
   clinicianId: mongoose.Types.ObjectId;
   email: string;
   password: string;
+
+  refreshToken?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -26,6 +28,10 @@ const clinicianAuthSchema = new Schema<IClinicianAuth>(
     password: {
       type: String,
       required: true,
+    },
+    refreshToken: {
+      type: String,
+      default: null,
     },
   },
   { timestamps: true }
