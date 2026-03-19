@@ -13,7 +13,7 @@ const router = Router();
 
 /**
  * @swagger
- * /clinicians:
+ * /api/clinicians:
  *   post:
  *     summary: Register a new clinician
  *     tags: [Clinicians]
@@ -98,7 +98,7 @@ router.post("/",validateClinician,createClinician);
 
 /**
  * @swagger
- * /clinicians/{id}:
+ * /api/clinicians/{id}:
  *   get:
  *     summary: Fetch clinician details including availability
  *     tags: [Clinicians]
@@ -120,7 +120,7 @@ router.get("/:id", getClinician);
 
 /**
  * @swagger
- * /clinicians/{id}/availability:
+ * /api/clinicians/{id}/availability:
  *   put:
  *     summary: Update clinician availability schedule
  *     tags: [Clinicians]

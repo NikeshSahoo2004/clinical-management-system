@@ -23,8 +23,18 @@ export const validateTreatmentPlan = (
   }
 
   // Required Field Validation
-  if (!diagnosis || diagnosis.trim() === "") {
+  if (!diagnosis) {
     errors.push("Diagnosis is required");
+  } else if (typeof diagnosis === "string") {
+    if (diagnosis.trim() === "") errors.push("Diagnosis is required");
+  } else if (typeof diagnosis === "object") {
+    // Your model stores diagnosis as an object: { condition, diagnosedAt, icd10Code }
+    const condition = (diagnosis as any).condition;
+    if (typeof condition !== "string" || condition.trim() === "") {
+      errors.push("Diagnosis condition is required");
+    }
+  } else {
+    errors.push("Diagnosis must be a string or an object");
   }
 
   if (errors.length > 0) {
