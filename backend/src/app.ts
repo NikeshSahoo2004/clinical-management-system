@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
-
+import cookieParser from "cookie-parser";
 import { swaggerUi, swaggerSpec } from "./utils/swagger";
 import appointmentRoutes from "./routes/appointmentRoutes";
 import analyticsRoutes from "./routes/analyticsRoutes";
@@ -14,8 +14,11 @@ import { protectRoute } from "./middlewares/auth.middleware";
 const app = express();
 
 /* Middleware */
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? "http://localhost:5173" }));
+app.use(cors({ origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+  credentials: true
+ }));
 app.use(express.json());
+app.use(cookieParser());
 
 /* Routes */
 app.use("/auth", authRoutes); 
