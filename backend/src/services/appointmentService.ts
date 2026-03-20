@@ -58,7 +58,8 @@ export async function getAppointmentByIdPopulated(
 }
 
 export async function createAppointment(data: CreateAppointmentDTO): Promise<Appointment> {
-  // Prevent double-booking: check for overlapping appointments for this clinician
+  // Prevent double-booking: check for overlapping appointments for this clinician 
+  //check for multiple appointments for scheduled time slot
   const overlap = await AppointmentModel.hasOverlap(
     data.clinicianId,
     new Date(data.scheduledAt),
